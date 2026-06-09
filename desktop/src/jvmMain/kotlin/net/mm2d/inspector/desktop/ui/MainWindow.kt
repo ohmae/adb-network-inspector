@@ -419,80 +419,83 @@ fun TransactionRow(
         shape = RoundedCornerShape(4.dp),
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
+            // 1行目：メソッド、ステータスコード、URLを左寄せ
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // メソッドタグ
-                    Box(
-                        modifier = Modifier
-                            .background(methodColor, shape = RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(
-                            method,
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    // ステータスコード
-                    if (status != -1) {
-                        Text(
-                            status.toString(),
-                            color = statusColor,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
-                        )
-                    } else {
-                        Text("PENDING", color = Color.LightGray, fontSize = 11.sp)
-                    }
+                // メソッドタグ（共通幅 60.dp / 中央揃え）
+                Box(
+                    modifier = Modifier
+                        .width(60.dp)
+                        .background(methodColor, shape = RoundedCornerShape(4.dp))
+                        .padding(vertical = 2.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        method,
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
-
-                // 所要時間 & サイズ
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (duration != null) {
-                        Text("${duration}ms", fontSize = 11.sp, color = Color.Gray)
-                    }
-                    val size = res?.bodySize ?: req?.bodySize ?: 0L
-                    if (size > 0) {
-                        Text(formatSize(size), fontSize = 11.sp, color = Color.Gray)
-                    }
+                Spacer(modifier = Modifier.width(8.dp))
+                // ステータスコード
+                if (status != -1) {
+                    Text(
+                        status.toString(),
+                        color = statusColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                    )
+                } else {
+                    Text("PENDING", color = Color.LightGray, fontSize = 11.sp)
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                // URL
+                Text(
+                    url,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.weight(1f),
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // URL
-            Text(
-                url,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // 時刻
+            // 2行目：Size、Duration、timestampを右寄せ
             val timeStr = remember(req?.timestamp ?: res?.timestamp) {
                 val t = req?.timestamp ?: res?.timestamp ?: 0L
                 if (t > 0) {
-                    SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()).format(Date(t))
+                    SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(t))
                 } else {
                     ""
                 }
             }
-            if (timeStr.isNotEmpty()) {
-                Text(
-                    timeStr,
-                    fontSize = 10.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.align(Alignment.End),
-                )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val size = res?.bodySize ?: req?.bodySize ?: 0L
+                if (size > 0) {
+                    Text(formatSize(size), fontSize = 11.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                if (duration != null) {
+                    Text("${duration}ms", fontSize = 11.sp, color = Color.Gray)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                if (timeStr.isNotEmpty()) {
+                    Text(
+                        timeStr,
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                    )
+                }
             }
         }
     }
