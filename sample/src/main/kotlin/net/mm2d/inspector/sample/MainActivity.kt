@@ -40,7 +40,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class MainActivity : ComponentActivity() {
 
     private val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor(OkHttpInspectorInterceptor())
+        .addNetworkInterceptor(OkHttpInspectorInterceptor())
         .build()
 
     private val scope = CoroutineScope(Dispatchers.Main)
