@@ -79,6 +79,8 @@ import java.text.SimpleDateFormat
 import java.util.Base64
 import java.util.Date
 import java.util.Locale
+import kotlin.math.ln
+import kotlin.math.pow
 
 // 通信トランザクションのモデリング（RequestとResponseの紐付け）
 data class HttpTransaction(
@@ -428,8 +430,7 @@ fun TransactionRow(
                 Box(
                     modifier = Modifier
                         .width(60.dp)
-                        .background(methodColor, shape = RoundedCornerShape(4.dp))
-                        .padding(vertical = 2.dp),
+                        .background(methodColor, shape = RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -463,8 +464,6 @@ fun TransactionRow(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             // 2行目：Size、Duration、timestampを右寄せ
             val timeStr = remember(req?.timestamp ?: res?.timestamp) {
                 val t = req?.timestamp ?: res?.timestamp ?: 0L
@@ -483,11 +482,11 @@ fun TransactionRow(
                 val size = res?.bodySize ?: req?.bodySize ?: 0L
                 if (size > 0) {
                     Text(formatSize(size), fontSize = 11.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
                 if (duration != null) {
                     Text("${duration}ms", fontSize = 11.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
                 if (timeStr.isNotEmpty()) {
                     Text(
@@ -731,8 +730,8 @@ fun rememberImageFromBase64(
 fun formatSize(
     bytes: Long,
 ): String {
-    if (bytes < 1024) return "$bytes B"
-    val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
+    if (bytes < 1024) return "${bytes}B"
+    val exp = (ln(bytes.toDouble()) / ln(1024.0)).toInt()
     val pre = "KMGTPE"[exp - 1] + ""
-    return String.format(Locale.getDefault(), "%.1f %sB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
+    return String.format(Locale.getDefault(), "%.1f%sB", bytes / 1024.0.pow(exp.toDouble()), pre)
 }
