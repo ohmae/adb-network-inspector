@@ -3,9 +3,11 @@ package net.mm2d.inspector.desktop.ui
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -58,6 +60,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.Json
 import net.mm2d.inspector.desktop.client.InspectorClient
 import net.mm2d.inspector.model.NetworkEvent
+import java.awt.Cursor
 import java.io.ByteArrayInputStream
 import java.text.SimpleDateFormat
 import java.util.Base64
@@ -192,145 +199,173 @@ fun MainWindow(
                 )
             },
         ) { paddingValues ->
-            Row(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .background(MaterialTheme.colorScheme.background),
             ) {
-                // 左ペイン：リストとフィルター (幅 45%)
-                Column(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(0.45f)
-                        .padding(8.dp),
-                ) {
-                    // 検索バー
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        placeholder = { Text("URL / Method / Status で検索...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        singleLine = true,
-                    )
+                val density = LocalDensity.current
+                var leftPaneWidth by remember { mutableStateOf(400.dp) }
+                val minWidth = 250.dp
+                val maxWidthLimit = maxWidth - 250.dp
 
-                    // フィルター選択
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Row(modifier = Modifier.fillMaxSize()) {
+                    // 左ペイン：リストとフィルター
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(leftPaneWidth.coerceIn(minWidth, maxOf(minWidth, maxWidthLimit)))
+                            .padding(8.dp),
                     ) {
-                        // メソッドフィルター
-                        var methodExpanded by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.weight(1f)) {
-                            Button(
-                                onClick = { methodExpanded = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
-                            ) {
-                                Text(
-                                    "Method: $methodFilter",
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = methodExpanded,
-                                onDismissRequest = { methodExpanded = false },
-                            ) {
-                                listOf("ALL", "GET", "POST", "PUT", "DELETE", "PATCH").forEach { m ->
-                                    DropdownMenuItem(
-                                        text = { Text(m) },
-                                        onClick = {
-                                            methodFilter = m
-                                            methodExpanded = false
-                                        },
+                        // 検索バー
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            placeholder = { Text("URL / Method / Status で検索...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            singleLine = true,
+                        )
+
+                        // フィルター選択
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            // メソッドフィルター
+                            var methodExpanded by remember { mutableStateOf(false) }
+                            Box(modifier = Modifier.weight(1f)) {
+                                Button(
+                                    onClick = { methodExpanded = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
+                                ) {
+                                    Text(
+                                        "Method: $methodFilter",
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
+                                }
+                                DropdownMenu(
+                                    expanded = methodExpanded,
+                                    onDismissRequest = { methodExpanded = false },
+                                ) {
+                                    listOf("ALL", "GET", "POST", "PUT", "DELETE", "PATCH").forEach { m ->
+                                        DropdownMenuItem(
+                                            text = { Text(m) },
+                                            onClick = {
+                                                methodFilter = m
+                                                methodExpanded = false
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+
+                            // ステータスフィルター
+                            var statusExpanded by remember { mutableStateOf(false) }
+                            Box(modifier = Modifier.weight(1f)) {
+                                Button(
+                                    onClick = { statusExpanded = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
+                                ) {
+                                    Text(
+                                        "Status: $statusFilter",
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = statusExpanded,
+                                    onDismissRequest = { statusExpanded = false },
+                                ) {
+                                    listOf("ALL", "2xx", "3xx", "4xx", "5xx").forEach { s ->
+                                        DropdownMenuItem(
+                                            text = { Text(s) },
+                                            onClick = {
+                                                statusFilter = s
+                                                statusExpanded = false
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        // ステータスフィルター
-                        var statusExpanded by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.weight(1f)) {
-                            Button(
-                                onClick = { statusExpanded = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                ),
+                        // リスト表示
+                        val listState = rememberLazyListState()
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                Text(
-                                    "Status: $statusFilter",
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = statusExpanded,
-                                onDismissRequest = { statusExpanded = false },
-                            ) {
-                                listOf("ALL", "2xx", "3xx", "4xx", "5xx").forEach { s ->
-                                    DropdownMenuItem(
-                                        text = { Text(s) },
-                                        onClick = {
-                                            statusFilter = s
-                                            statusExpanded = false
-                                        },
+                                items(filteredTransactions, key = { it.id }) { tx ->
+                                    TransactionRow(
+                                        transaction = tx,
+                                        isSelected = tx.id == selectedTransactionId,
+                                        onClick = { selectedTransactionId = tx.id },
                                     )
                                 }
                             }
+                            VerticalScrollbar(
+                                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                                adapter = rememberScrollbarAdapter(listState),
+                            )
                         }
                     }
 
-                    // リスト表示
-                    val listState = rememberLazyListState()
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            items(filteredTransactions, key = { it.id }) { tx ->
-                                TransactionRow(
-                                    transaction = tx,
-                                    isSelected = tx.id == selectedTransactionId,
-                                    onClick = { selectedTransactionId = tx.id },
-                                )
-                            }
-                        }
-                        VerticalScrollbar(
-                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                            adapter = rememberScrollbarAdapter(listState),
+                    // ドラッグ可能な境界線
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(8.dp)
+                            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                            .pointerInput(Unit) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val dragAmountDp = with(density) { dragAmount.x.toDp() }
+                                    leftPaneWidth =
+                                        (leftPaneWidth + dragAmountDp).coerceIn(
+                                            minWidth,
+                                            maxOf(minWidth, maxWidthLimit),
+                                        )
+                                }
+                            },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(1.dp)
+                                .align(Alignment.Center)
+                                .background(Color.Gray.copy(alpha = 0.5f)),
                         )
                     }
-                }
 
-                // ディバイダー
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .background(Color.Gray.copy(alpha = 0.5f)),
-                )
-
-                // 右ペイン：詳細表示 (残り 55%)
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(1f)
-                        .padding(8.dp),
-                ) {
-                    if (selectedTx != null) {
-                        TransactionDetail(selectedTx)
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text("通信ログを選択すると、詳細が表示されます。", color = Color.Gray)
+                    // 右ペイン：詳細表示 (残り 55%)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .padding(8.dp),
+                    ) {
+                        if (selectedTx != null) {
+                            TransactionDetail(selectedTx)
+                        } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("通信ログを選択すると、詳細が表示されます。", color = Color.Gray)
+                            }
                         }
                     }
                 }
